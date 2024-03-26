@@ -21,11 +21,19 @@ def get_links(url):
             if link.get("href"):
 
                 if ((next_url not in link.get("href")) & ("http" not in link.get("href")) & ("www" not in link.get("href"))):
-                    page_url = base_url.strip(
-                        "/") + "/" + link.get("href").strip("/")
+                    page_url = base_url.strip("/") + "/" + link.get("href").strip("/")
                     if page_url not in urls:
                         urls.append(page_url)
                         print(f"Adding: {page_url} Number Added: {len(urls)}")
+                        
+                elif (next_url in link.get("href")):
+                    page_url = link.get("href")
+                    if page_url not in urls:
+                       urls.append(page_url)
+                       print(f"Adding: {page_url} Number Added: {len(urls)}")
+
+
+
     print(f"Total number of URLs: {len(urls)}")
     return urls
 
@@ -48,7 +56,7 @@ def get_emails(urls):
     return emails
 
 
-url = "https://www.scrapethissite.com/"
+url = "http://www.hrid-andt.hr/"
 emails = get_emails(get_links(url))
 
 print(f"Number of emails = {len(emails)}")
