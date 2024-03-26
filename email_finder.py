@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 import warnings
 from bs4 import GuessedAtParserWarning, MarkupResemblesLocatorWarning
 
+# USE VPN !!!
+
 
 def main():
     warnings.filterwarnings('ignore', category=GuessedAtParserWarning)
@@ -17,7 +19,7 @@ def main():
 
     print(f"Number of emails = {len(emails)}")
     for email in emails:
-        print(print(email))
+        print(email)
 
 
 def get_emails(url):
