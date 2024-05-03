@@ -63,7 +63,7 @@ class EmailFinderApp(QMainWindow):
         self.setCentralWidget(main_window)
 
     def find_emails(self):
-
+        self.model.clear()
         warnings.filterwarnings('ignore', category=GuessedAtParserWarning)
         warnings.filterwarnings(
             'ignore', category=MarkupResemblesLocatorWarning)
@@ -82,6 +82,10 @@ class EmailFinderApp(QMainWindow):
             except (requests.exceptions.MissingSchema, requests.exceptions.ConnectionError):
                 continue
             print(f"Crawling URL =================== {next_url} ")
+            self.model.appendRow(
+                [QStandardItem(f"Crawling URL =================== {next_url} ")])
+            self.tree_view.update()
+
             soup = BeautifulSoup(response.content, 'html.parser')
             links = soup.find_all("a")
             new_emails = set(re.findall(
@@ -100,6 +104,9 @@ class EmailFinderApp(QMainWindow):
                         if page_url not in urls:
                             urls.append(page_url)
                             print(f"Adding page # {len(urls)}: {page_url}")
+                            self.model.appendRow(
+                                [QStandardItem(f"Adding page # {len(urls)}: {page_url}")])
+                            self.tree_view.update()
 
                     elif (next_url in link.get("href")):
                         page_url = link.get("href")
@@ -107,11 +114,21 @@ class EmailFinderApp(QMainWindow):
                             urls.append(page_url)
                             print(
                                 f"Adding: {page_url} Number Added: {len(urls)}")
+                            self.model.appendRow(
+                                [QStandardItem(f"Adding: {page_url} Number Added: {len(urls)}")])
+                            self.tree_view.update()
+
         print(f"Total number of URLs:   {len(urls)}")
         print(f"Total number of Emails: {len(emails)}")
+        self.model.appendRow(
+            [QStandardItem(f"Total number of URLs:   {len(urls)}")])
+        self.model.appendRow(
+            [QStandardItem(f"Total number of Emails: {len(emails)}")])
+        self.tree_view.update()
 
         for email in emails:
             print(email)
+            self.model.appendRow([QStandardItem(email)])
 
 
 if __name__ == "__main__":
