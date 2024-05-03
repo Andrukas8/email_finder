@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QTreeView, QLineEdit, QMainWindow, QMessageBox, QFileDialog, QCheckBox, QGridLayout, QDoubleSpinBox
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QTreeView, QLineEdit, QMainWindow, QMessageBox, QFileDialog, QCheckBox, QGridLayout, QDoubleSpinBox, QListWidget
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt
 import os
@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from bs4 import BeautifulSoup
 import warnings
 from bs4 import GuessedAtParserWarning, MarkupResemblesLocatorWarning
+import time
 
 
 class EmailFinderApp(QMainWindow):
@@ -29,6 +30,8 @@ class EmailFinderApp(QMainWindow):
         self.search_btn.clicked.connect(self.find_emails)
 
         self.stop_btn = QPushButton("Stop")
+        self.stop_btn.clicked.connect(self.testing)
+
         self.close_btn = QPushButton("Close")
         self.time_limit_chk = QCheckBox("Time Limit, sec: ")
         self.time_limit_num = QDoubleSpinBox()
@@ -37,9 +40,9 @@ class EmailFinderApp(QMainWindow):
         self.page_limit_num = QDoubleSpinBox()
 
         # Creation of a TreeView
-        self.model = QStandardItemModel()
-        self.tree_view = QTreeView()
-        self.tree_view.setModel(self.model)
+
+        self.output_list = QListWidget()
+        self.output_list.updatesEnabled()
 
         self.master_layout = QGridLayout()
 
@@ -49,7 +52,7 @@ class EmailFinderApp(QMainWindow):
         self.master_layout.addWidget(self.stop_btn, 0, 4)
         self.master_layout.addWidget(self.close_btn, 0, 5)
 
-        self.master_layout.addWidget(self.tree_view, 1, 2, 3, 1)
+        self.master_layout.addWidget(self.output_list, 1, 2, 3, 1)
 
         self.master_layout.addWidget(self.time_limit_chk, 1, 3)
         self.master_layout.addWidget(self.time_limit_num, 1, 4)
@@ -62,8 +65,14 @@ class EmailFinderApp(QMainWindow):
         main_window.setLayout(self.master_layout)
         self.setCentralWidget(main_window)
 
+    def testing(self):
+        self.output_list.clear()
+        for i in range(10):
+            time.sleep(1)
+            self.output_list.addItem(str(i))
+            self.output_list.commitData()
+
     def find_emails(self):
-        self.model.clear()
         warnings.filterwarnings('ignore', category=GuessedAtParserWarning)
         warnings.filterwarnings(
             'ignore', category=MarkupResemblesLocatorWarning)
@@ -82,9 +91,8 @@ class EmailFinderApp(QMainWindow):
             except (requests.exceptions.MissingSchema, requests.exceptions.ConnectionError):
                 continue
             print(f"Crawling URL =================== {next_url} ")
-            self.model.appendRow(
-                [QStandardItem(f"Crawling URL =================== {next_url} ")])
-            self.tree_view.update()
+            self.output_list.addItem(
+                f"Crawling URL =================== {next_url} ")
 
             soup = BeautifulSoup(response.content, 'html.parser')
             links = soup.find_all("a")
@@ -93,6 +101,7 @@ class EmailFinderApp(QMainWindow):
 
             if len(new_emails) > 0:
                 print(f"Found: {new_emails}")
+                self.output_list.addItem(f"Found: {new_emails}")
                 emails.update(new_emails)
 
             for link in links:
@@ -104,9 +113,9 @@ class EmailFinderApp(QMainWindow):
                         if page_url not in urls:
                             urls.append(page_url)
                             print(f"Adding page # {len(urls)}: {page_url}")
-                            self.model.appendRow(
-                                [QStandardItem(f"Adding page # {len(urls)}: {page_url}")])
-                            self.tree_view.update()
+                            self.output_list.addItem(
+                                f"Adding page # {len(urls)}: {page_url}")
+                            self.output_list.update()
 
                     elif (next_url in link.get("href")):
                         page_url = link.get("href")
@@ -114,21 +123,20 @@ class EmailFinderApp(QMainWindow):
                             urls.append(page_url)
                             print(
                                 f"Adding: {page_url} Number Added: {len(urls)}")
-                            self.model.appendRow(
-                                [QStandardItem(f"Adding: {page_url} Number Added: {len(urls)}")])
-                            self.tree_view.update()
+
+                            self.output_list.addItem(
+                                f"Adding: {page_url} Number Added: {len(urls)}")
+                self.output_list.update()
 
         print(f"Total number of URLs:   {len(urls)}")
         print(f"Total number of Emails: {len(emails)}")
-        self.model.appendRow(
-            [QStandardItem(f"Total number of URLs:   {len(urls)}")])
-        self.model.appendRow(
-            [QStandardItem(f"Total number of Emails: {len(emails)}")])
-        self.tree_view.update()
+
+        self.output_list.addItem(f"Total number of URLs:   {len(urls)}")
+        self.output_list.addItem(f"Total number of Emails: {len(emails)}")
 
         for email in emails:
             print(email)
-            self.model.appendRow([QStandardItem(email)])
+            self.output_list.addItem(email)
 
 
 if __name__ == "__main__":
