@@ -66,11 +66,10 @@ class EmailFinderApp(QMainWindow):
         self.setCentralWidget(main_window)
 
     def testing(self):
-        self.output_list.clear()
-        for i in range(10):
-            time.sleep(1)
+        for i in range(100):
             self.output_list.addItem(str(i))
-            self.output_list.commitData()
+            QApplication.processEvents()
+            time.sleep(.05)
 
     def find_emails(self):
         warnings.filterwarnings('ignore', category=GuessedAtParserWarning)
@@ -93,6 +92,7 @@ class EmailFinderApp(QMainWindow):
             print(f"Crawling URL =================== {next_url} ")
             self.output_list.addItem(
                 f"Crawling URL =================== {next_url} ")
+            QApplication.processEvents()
 
             soup = BeautifulSoup(response.content, 'html.parser')
             links = soup.find_all("a")
@@ -103,6 +103,7 @@ class EmailFinderApp(QMainWindow):
                 print(f"Found: {new_emails}")
                 self.output_list.addItem(f"Found: {new_emails}")
                 emails.update(new_emails)
+                QApplication.processEvents()
 
             for link in links:
                 if link.get("href"):
@@ -115,7 +116,7 @@ class EmailFinderApp(QMainWindow):
                             print(f"Adding page # {len(urls)}: {page_url}")
                             self.output_list.addItem(
                                 f"Adding page # {len(urls)}: {page_url}")
-                            self.output_list.update()
+                            QApplication.processEvents()
 
                     elif (next_url in link.get("href")):
                         page_url = link.get("href")
@@ -126,17 +127,19 @@ class EmailFinderApp(QMainWindow):
 
                             self.output_list.addItem(
                                 f"Adding: {page_url} Number Added: {len(urls)}")
-                self.output_list.update()
+                            QApplication.processEvents()
 
         print(f"Total number of URLs:   {len(urls)}")
         print(f"Total number of Emails: {len(emails)}")
 
         self.output_list.addItem(f"Total number of URLs:   {len(urls)}")
         self.output_list.addItem(f"Total number of Emails: {len(emails)}")
+        QApplication.processEvents()
 
         for email in emails:
             print(email)
             self.output_list.addItem(email)
+            QApplication.processEvents()
 
 
 if __name__ == "__main__":
