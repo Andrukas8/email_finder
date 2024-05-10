@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 import warnings
 from bs4 import GuessedAtParserWarning, MarkupResemblesLocatorWarning
 
+import sys
+
 # USE VPN !!!
 
 
@@ -13,7 +15,9 @@ def main():
     warnings.filterwarnings('ignore', category=GuessedAtParserWarning)
     warnings.filterwarnings('ignore', category=MarkupResemblesLocatorWarning)
 
-    url = "https://www.scrapethissite.com/"
+    # url = "https://www.scrapethissite.com/"
+
+    url = sys.argv[1]
 
     emails = get_emails(url)
 
