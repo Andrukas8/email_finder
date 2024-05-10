@@ -1,11 +1,8 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QSpinBox, QPushButton, QVBoxLayout, QPlainTextEdit, QLineEdit, QMainWindow, QMessageBox, QFileDialog, QCheckBox, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QSpinBox, QPushButton, QVBoxLayout, QPlainTextEdit, QLineEdit, QMainWindow, QCheckBox, QGridLayout
 from PyQt5.QtCore import Qt
-import os
-
 import re
 import requests
 import requests.exceptions
-from urllib.parse import urlsplit
 from bs4 import BeautifulSoup
 import warnings
 from bs4 import GuessedAtParserWarning, MarkupResemblesLocatorWarning
@@ -23,6 +20,8 @@ class EmailFinderApp(QMainWindow):
         self.time_current = 0
         self.page_limit_pages = 0
 
+        self.crawled_pages = 0
+
         self.go = True
 
         main_window = QWidget()
@@ -30,13 +29,16 @@ class EmailFinderApp(QMainWindow):
         self.master_layout = QVBoxLayout()
 
         self.url_lbl = QLabel("Url:")
-        self.url_fld = QLineEdit("https://www.scrapethissite.com/")
+        self.url_fld = QLineEdit()
 
         self.search_btn = QPushButton("Search")
         self.search_btn.clicked.connect(self.find_emails)
 
         self.stop_btn = QPushButton("Stop")
         self.stop_btn.clicked.connect(self.stop)
+
+        self.clear_btn = QPushButton("Clear")
+        self.clear_btn.clicked.connect(self.clear)
 
         self.close_btn = QPushButton("Close")
         self.close_btn.clicked.connect(self.close)
@@ -62,7 +64,8 @@ class EmailFinderApp(QMainWindow):
         self.master_layout.addWidget(self.url_fld, 0, 2)
         self.master_layout.addWidget(self.search_btn, 0, 3)
         self.master_layout.addWidget(self.stop_btn, 0, 4)
-        self.master_layout.addWidget(self.close_btn, 0, 5)
+        self.master_layout.addWidget(self.clear_btn, 0, 5)
+        self.master_layout.addWidget(self.close_btn, 0, 6)
 
         self.master_layout.addWidget(self.output_list, 1, 2, 3, 1)
 
@@ -76,6 +79,16 @@ class EmailFinderApp(QMainWindow):
 
         main_window.setLayout(self.master_layout)
         self.setCentralWidget(main_window)
+
+    def clear(self):
+        self.url_fld.clear()
+        self.time_limit_chk.setChecked(False)
+        self.time_limit_num.setValue(0)
+        self.time_limit_num.setDisabled(True)
+        self.page_limit_chk.setChecked(False)
+        self.page_limit_num.setValue(0)
+        self.page_limit_num.setDisabled(True)
+        self.output_list.clear()
 
     def time_limit(self):
         if self.time_limit_chk.checkState():
@@ -93,6 +106,7 @@ class EmailFinderApp(QMainWindow):
         self.go = False
 
     def find_emails(self):
+        self.go = True
 
         if self.time_limit_chk.checkState():
             self.time_limit_sec = self.time_limit_num.value()
@@ -106,7 +120,6 @@ class EmailFinderApp(QMainWindow):
             'ignore', category=MarkupResemblesLocatorWarning)
 
         base_url = self.url_fld.text()
-        print(base_url)
 
         urls = []
         emails = set()
@@ -121,7 +134,7 @@ class EmailFinderApp(QMainWindow):
                     self.go = False
 
             if self.page_limit_chk.checkState():
-                if len(urls) >= self.page_limit_pages:
+                if self.crawled_pages >= self.page_limit_pages:
                     self.go = False
 
             if self.go:
@@ -129,9 +142,9 @@ class EmailFinderApp(QMainWindow):
                     response = requests.get(next_url)
                 except (requests.exceptions.MissingSchema, requests.exceptions.ConnectionError):
                     continue
-                print(f"Crawling URL =================== {next_url} ")
                 self.output_list.appendPlainText(
-                    f"Crawling URL =================== {next_url} ")
+                    f"Crawling URL ==> {next_url} ")
+                self.crawled_pages += 1
                 QApplication.processEvents()
 
                 soup = BeautifulSoup(response.content, 'html.parser')
@@ -140,7 +153,6 @@ class EmailFinderApp(QMainWindow):
                     r"[a-z0-9\.\-+_]+@[a-z0-9\.\-+_]+\.[a-z]+", response.text, re.I))
 
                 if len(new_emails) > 0:
-                    print(f"Found: {new_emails}")
                     self.output_list.appendPlainText(f"Found: {new_emails}")
                     emails.update(new_emails)
                     QApplication.processEvents()
@@ -153,7 +165,6 @@ class EmailFinderApp(QMainWindow):
                                 "/") + "/" + link.get("href").strip("/")
                             if page_url not in urls:
                                 urls.append(page_url)
-                                print(f"Adding page # {len(urls)}: {page_url}")
                                 self.output_list.appendPlainText(
                                     f"Adding page # {len(urls)}: {page_url}")
                                 QApplication.processEvents()
@@ -162,17 +173,11 @@ class EmailFinderApp(QMainWindow):
                             page_url = link.get("href")
                             if page_url not in urls:
                                 urls.append(page_url)
-                                print(
-                                    f"Adding: {page_url} Number Added: {len(urls)}")
-
                                 self.output_list.appendPlainText(
                                     f"Adding: {page_url} Number Added: {len(urls)}")
                                 QApplication.processEvents()
             else:
                 break
-
-        print(f"Total number of URLs:   {len(urls)}")
-        print(f"Total number of Emails: {len(emails)}")
 
         self.output_list.appendPlainText(
             f"Total number of URLs:   {len(urls)}")
@@ -181,7 +186,6 @@ class EmailFinderApp(QMainWindow):
         QApplication.processEvents()
 
         for email in emails:
-            print(email)
             self.output_list.appendPlainText(email)
             QApplication.processEvents()
 
