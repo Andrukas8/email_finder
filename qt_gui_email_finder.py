@@ -1,5 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QTreeView, QLineEdit, QMainWindow, QMessageBox, QFileDialog, QCheckBox, QGridLayout, QDoubleSpinBox, QListWidget
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QPlainTextEdit, QHBoxLayout, QTreeView, QLineEdit, QMainWindow, QMessageBox, QFileDialog, QCheckBox, QGridLayout, QDoubleSpinBox, QListWidget
 from PyQt5.QtCore import Qt
 import os
 
@@ -19,30 +18,32 @@ class EmailFinderApp(QMainWindow):
         self.setWindowTitle("EmailFinder 1.0")
         self.resize(800, 300)
 
+        self.go = True
+
         main_window = QWidget()
 
         self.master_layout = QVBoxLayout()
 
         self.url_lbl = QLabel("Url:")
-        self.url_fld = QLineEdit()
+        self.url_fld = QLineEdit("https://www.scrapethissite.com/")
 
         self.search_btn = QPushButton("Search")
         self.search_btn.clicked.connect(self.find_emails)
 
         self.stop_btn = QPushButton("Stop")
-        self.stop_btn.clicked.connect(self.testing)
+        self.stop_btn.clicked.connect(self.stop)
 
         self.close_btn = QPushButton("Close")
+        self.close_btn.clicked.connect(self.close)
+
         self.time_limit_chk = QCheckBox("Time Limit, sec: ")
         self.time_limit_num = QDoubleSpinBox()
 
         self.page_limit_chk = QCheckBox("Page Limit: ")
         self.page_limit_num = QDoubleSpinBox()
 
-        # Creation of a TreeView
-
-        self.output_list = QListWidget()
-        self.output_list.updatesEnabled()
+        self.output_list = QPlainTextEdit()
+        self.output_list.setLineWrapMode(QPlainTextEdit.NoWrap)
 
         self.master_layout = QGridLayout()
 
@@ -65,11 +66,8 @@ class EmailFinderApp(QMainWindow):
         main_window.setLayout(self.master_layout)
         self.setCentralWidget(main_window)
 
-    def testing(self):
-        for i in range(100):
-            self.output_list.addItem(str(i))
-            QApplication.processEvents()
-            time.sleep(.05)
+    def stop(self):
+        self.go = False
 
     def find_emails(self):
         warnings.filterwarnings('ignore', category=GuessedAtParserWarning)
@@ -85,60 +83,65 @@ class EmailFinderApp(QMainWindow):
             urls.append(base_url)
 
         for next_url in urls:
-            try:
-                response = requests.get(next_url)
-            except (requests.exceptions.MissingSchema, requests.exceptions.ConnectionError):
-                continue
-            print(f"Crawling URL =================== {next_url} ")
-            self.output_list.addItem(
-                f"Crawling URL =================== {next_url} ")
-            QApplication.processEvents()
-
-            soup = BeautifulSoup(response.content, 'html.parser')
-            links = soup.find_all("a")
-            new_emails = set(re.findall(
-                r"[a-z0-9\.\-+_]+@[a-z0-9\.\-+_]+\.[a-z]+", response.text, re.I))
-
-            if len(new_emails) > 0:
-                print(f"Found: {new_emails}")
-                self.output_list.addItem(f"Found: {new_emails}")
-                emails.update(new_emails)
+            if self.go:
+                try:
+                    response = requests.get(next_url)
+                except (requests.exceptions.MissingSchema, requests.exceptions.ConnectionError):
+                    continue
+                print(f"Crawling URL =================== {next_url} ")
+                self.output_list.appendPlainText(
+                    f"Crawling URL =================== {next_url} ")
                 QApplication.processEvents()
 
-            for link in links:
-                if link.get("href"):
+                soup = BeautifulSoup(response.content, 'html.parser')
+                links = soup.find_all("a")
+                new_emails = set(re.findall(
+                    r"[a-z0-9\.\-+_]+@[a-z0-9\.\-+_]+\.[a-z]+", response.text, re.I))
 
-                    if ((next_url not in link.get("href")) & ("http" not in link.get("href")) & ("www" not in link.get("href"))):
-                        page_url = base_url.strip(
-                            "/") + "/" + link.get("href").strip("/")
-                        if page_url not in urls:
-                            urls.append(page_url)
-                            print(f"Adding page # {len(urls)}: {page_url}")
-                            self.output_list.addItem(
-                                f"Adding page # {len(urls)}: {page_url}")
-                            QApplication.processEvents()
+                if len(new_emails) > 0:
+                    print(f"Found: {new_emails}")
+                    self.output_list.appendPlainText(f"Found: {new_emails}")
+                    emails.update(new_emails)
+                    QApplication.processEvents()
 
-                    elif (next_url in link.get("href")):
-                        page_url = link.get("href")
-                        if page_url not in urls:
-                            urls.append(page_url)
-                            print(
-                                f"Adding: {page_url} Number Added: {len(urls)}")
+                for link in links:
+                    if link.get("href"):
 
-                            self.output_list.addItem(
-                                f"Adding: {page_url} Number Added: {len(urls)}")
-                            QApplication.processEvents()
+                        if ((next_url not in link.get("href")) & ("http" not in link.get("href")) & ("www" not in link.get("href"))):
+                            page_url = base_url.strip(
+                                "/") + "/" + link.get("href").strip("/")
+                            if page_url not in urls:
+                                urls.append(page_url)
+                                print(f"Adding page # {len(urls)}: {page_url}")
+                                self.output_list.appendPlainText(
+                                    f"Adding page # {len(urls)}: {page_url}")
+                                QApplication.processEvents()
+
+                        elif (next_url in link.get("href")):
+                            page_url = link.get("href")
+                            if page_url not in urls:
+                                urls.append(page_url)
+                                print(
+                                    f"Adding: {page_url} Number Added: {len(urls)}")
+
+                                self.output_list.appendPlainText(
+                                    f"Adding: {page_url} Number Added: {len(urls)}")
+                                QApplication.processEvents()
+            else:
+                break
 
         print(f"Total number of URLs:   {len(urls)}")
         print(f"Total number of Emails: {len(emails)}")
 
-        self.output_list.addItem(f"Total number of URLs:   {len(urls)}")
-        self.output_list.addItem(f"Total number of Emails: {len(emails)}")
+        self.output_list.appendPlainText(
+            f"Total number of URLs:   {len(urls)}")
+        self.output_list.appendPlainText(
+            f"Total number of Emails: {len(emails)}")
         QApplication.processEvents()
 
         for email in emails:
             print(email)
-            self.output_list.addItem(email)
+            self.output_list.appendPlainText(email)
             QApplication.processEvents()
 
 
