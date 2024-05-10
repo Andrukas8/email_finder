@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QPlainTextEdit, QHBoxLayout, QTreeView, QLineEdit, QMainWindow, QMessageBox, QFileDialog, QCheckBox, QGridLayout, QDoubleSpinBox, QListWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QSpinBox, QPushButton, QVBoxLayout, QPlainTextEdit, QLineEdit, QMainWindow, QMessageBox, QFileDialog, QCheckBox, QGridLayout
 from PyQt5.QtCore import Qt
 import os
 
@@ -17,6 +17,11 @@ class EmailFinderApp(QMainWindow):
         super(EmailFinderApp, self).__init__()
         self.setWindowTitle("EmailFinder 1.0")
         self.resize(800, 300)
+
+        self.time_limit_sec = 0
+        self.time_started = 0
+        self.time_current = 0
+        self.page_limit_pages = 0
 
         self.go = True
 
@@ -37,10 +42,16 @@ class EmailFinderApp(QMainWindow):
         self.close_btn.clicked.connect(self.close)
 
         self.time_limit_chk = QCheckBox("Time Limit, sec: ")
-        self.time_limit_num = QDoubleSpinBox()
+        self.time_limit_chk.stateChanged.connect(self.time_limit)
+        self.time_limit_num = QSpinBox()
+        self.time_limit_num.setSingleStep(10)
+        self.time_limit_num.setDisabled(True)
 
         self.page_limit_chk = QCheckBox("Page Limit: ")
-        self.page_limit_num = QDoubleSpinBox()
+        self.page_limit_chk.stateChanged.connect(self.page_limit)
+        self.page_limit_num = QSpinBox()
+        self.page_limit_num.setSingleStep(10)
+        self.page_limit_num.setDisabled(True)
 
         self.output_list = QPlainTextEdit()
         self.output_list.setLineWrapMode(QPlainTextEdit.NoWrap)
@@ -66,10 +77,30 @@ class EmailFinderApp(QMainWindow):
         main_window.setLayout(self.master_layout)
         self.setCentralWidget(main_window)
 
+    def time_limit(self):
+        if self.time_limit_chk.checkState():
+            self.time_limit_num.setEnabled(True)
+        else:
+            self.time_limit_num.setDisabled(True)
+
+    def page_limit(self):
+        if self.page_limit_chk.checkState():
+            self.page_limit_num.setEnabled(True)
+        else:
+            self.page_limit_num.setDisabled(True)
+
     def stop(self):
         self.go = False
 
     def find_emails(self):
+
+        if self.time_limit_chk.checkState():
+            self.time_limit_sec = self.time_limit_num.value()
+            self.time_started = time.perf_counter()
+
+        if self.page_limit_chk.checkState():
+            self.page_limit_pages = self.page_limit_num.value()
+
         warnings.filterwarnings('ignore', category=GuessedAtParserWarning)
         warnings.filterwarnings(
             'ignore', category=MarkupResemblesLocatorWarning)
@@ -83,6 +114,16 @@ class EmailFinderApp(QMainWindow):
             urls.append(base_url)
 
         for next_url in urls:
+
+            if self.time_limit_chk.checkState():
+                self.time_current = time.perf_counter()
+                if self.time_current - self.time_started > self.time_limit_sec:
+                    self.go = False
+
+            if self.page_limit_chk.checkState():
+                if len(urls) >= self.page_limit_pages:
+                    self.go = False
+
             if self.go:
                 try:
                     response = requests.get(next_url)
