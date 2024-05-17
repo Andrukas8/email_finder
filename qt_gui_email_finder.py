@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import warnings
 from bs4 import GuessedAtParserWarning, MarkupResemblesLocatorWarning
 import time
+import geocoder
 
 
 class EmailFinderApp(QMainWindow):
@@ -58,6 +59,9 @@ class EmailFinderApp(QMainWindow):
         self.output_list = QPlainTextEdit()
         self.output_list.setLineWrapMode(QPlainTextEdit.NoWrap)
 
+        self.ip_info = QLabel()
+        self.ip_info.setAlignment(Qt.AlignTop)
+
         self.master_layout = QGridLayout()
 
         self.master_layout.addWidget(self.url_lbl, 0, 0)
@@ -75,10 +79,27 @@ class EmailFinderApp(QMainWindow):
         self.master_layout.addWidget(self.page_limit_chk, 2, 3)
         self.master_layout.addWidget(self.page_limit_num, 2, 4)
 
+        self.master_layout.addWidget(self.ip_info, 3, 3)
+        self.ip_info.width = 200
+
         self.master_layout.setAlignment(Qt.AlignTop)
 
         main_window.setLayout(self.master_layout)
         self.setCentralWidget(main_window)
+
+        self.get_ip()
+
+    def get_ip(self):
+        ip_info_str = ""
+        try:
+            public_ip = requests.get('https://api.ipify.org').text
+            ip = geocoder.ip(public_ip)
+            ip_info_str += f"Public IP Address: {public_ip}\nCountry: {ip.country}\nCity: {ip.city}"
+
+        except requests.RequestException as e:
+            ip_info_str = f"Error retrieving public IP address: {e}"
+
+        self.ip_info.setText(ip_info_str)
 
     def clear(self):
         self.url_fld.clear()
